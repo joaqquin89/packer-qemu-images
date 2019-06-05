@@ -1,0 +1,63 @@
+{
+  "builders":
+  [
+    {
+      "type": "qemu",
+      "accelerator": "kvm",
+      "headless": true,
+      "qemuargs": [
+        [ "-m", "2048M" ],
+        [ "-smp", "cpus=1,maxcpus=16,cores=4" ]
+      ],
+      "disk_interface": "virtio",
+      "disk_size": 350000,
+      "format": "qcow2",
+      "net_device": "virtio-net",
+
+      "iso_url": "http://ftp.inf.utfsm.cl/pub/Linux/CentOS/7.6.1810/isos/x86_64/CentOS-7-x86_64-Minimal-1810.iso",
+      "iso_checksum": "38d5d51d9d100fd73df031ffd6bd8b1297ce24660dc8c13a3b8b4534a4bd291c",
+      "iso_checksum_type": "sha256",
+
+      "vm_name": "centos7-rke",
+      "output_directory": "builds/",
+      "headless": false,
+      "communicator": "ssh",
+      "ssh_username": "root",
+      "ssh_password": "centos",
+
+      "http_directory": "docroot",
+      "http_port_min": 10082,
+      "http_port_max": 10089,
+
+      "ssh_host_port_min": 2222,
+      "ssh_host_port_max": 2229,
+
+      "ssh_port": 22,
+      "ssh_wait_timeout": "1200s",
+
+      "boot_wait": "40s",
+      "boot_command": [
+        "<up><wait><tab><wait> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/c7-kvm-ks.cfg<enter><wait>"
+      ],
+
+      "shutdown_command": "shutdown -P now"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline":[
+            "sudo yum update -y"
+        ]
+    },
+    {
+      "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} sudo -E sh '{{ .Path }}'",
+      "scripts": [
+        "install_docker.sh",
+        "post_install.sh",
+        "security.sh"
+      ],
+      "type": "shell"
+    }
+  ]
+}
