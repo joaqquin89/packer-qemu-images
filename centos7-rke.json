@@ -1,63 +1,63 @@
 {
-  "builders":
-  [
+  "builders": [
     {
       "type": "qemu",
-      "accelerator": "kvm",
-      "headless": true,
-      "qemuargs": [
-        [ "-m", "2048M" ],
-        [ "-smp", "cpus=1,maxcpus=16,cores=4" ]
-      ],
-      "disk_interface": "virtio",
-      "disk_size": 350000,
-      "format": "qcow2",
-      "net_device": "virtio-net",
-
-      "iso_url": "http://ftp.inf.utfsm.cl/pub/Linux/CentOS/7.6.1810/isos/x86_64/CentOS-7-x86_64-Minimal-1810.iso",
-      "iso_checksum": "38d5d51d9d100fd73df031ffd6bd8b1297ce24660dc8c13a3b8b4534a4bd291c",
-      "iso_checksum_type": "sha256",
-
-      "vm_name": "centos7-rke",
+      "iso_url": "https://mirror.ufro.cl/centos/7.6.1810/isos/x86_64/CentOS-7-x86_64-Minimal-1810.iso",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
       "output_directory": "builds/",
-      "headless": false,
-      "communicator": "ssh",
-      "ssh_username": "root",
+      "shutdown_command": "echo 'centos'|sudo -S /sbin/halt -h -p",
+      "disk_size": "{{user `disk_size`}}",
+      "accelerator": "kvm",
+      "http_directory": "http",
       "ssh_password": "centos",
-
-      "http_directory": "docroot",
-      "http_port_min": 10082,
-      "http_port_max": 10089,
-
-      "ssh_host_port_min": 2222,
-      "ssh_host_port_max": 2229,
-
       "ssh_port": 22,
-      "ssh_wait_timeout": "1200s",
-
-      "boot_wait": "40s",
+      "ssh_username": "centos",
+      "ssh_wait_timeout": "30m",
+      "vm_name": "{{ user `template` }}",
+      "vm_name": "{{ user `template` }}",
+      "skip_compaction": "true",
       "boot_command": [
-        "<up><wait><tab><wait> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/c7-kvm-ks.cfg<enter><wait>"
+        "<up><wait><tab> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/{{user `ks_path`}}<enter><wait>"
       ],
-
-      "shutdown_command": "shutdown -P now"
+      "boot_wait": "10s",
+      "headless": "{{ user `headless` }}",
+      "qemuargs": [
+        [ "-m", "{{ user `memory` }}" ],
+        [ "-smp", "{{ user `cpus_num` }}" ]
+      ]
     }
   ],
   "provisioners": [
     {
-      "type": "shell",
-      "inline":[
-            "sudo yum update -y"
-        ]
+      "destination": "/tmp/CentOS-Base.repo",
+      "source": "./files/CentOS-Base.repo",
+      "type": "file"
     },
     {
-      "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} sudo -E sh '{{ .Path }}'",
-      "scripts": [
-        "install_docker.sh",
-        "post_install.sh",
-        "security.sh"
+      "inline": [
+        "sudo yum -y update && sudo yum -y install cloud-init cloud-utils-growpart",
+        "sudo cloud-init clean; sudo truncate -s 0 /etc/machine-id; sudo rm -fr /var/lib/cloud/seed",
+        "sudo yum -y install epel-release && sudo yum -y install ansible"
       ],
       "type": "shell"
+    },
+    {
+      "scripts": [
+        "security.sh",
+        "install_docker.sh",
+        "post_install.sh"
+      ],
+      "type": "shell",
+      "execute_command": "sudo sh '{{.Path}}'"
     }
-  ]
+  ],
+  "variables": {
+    "disk_size": "32768",
+    "memory": "6096",
+    "cpus_num": "5",
+    "headless": "false",
+    "ks_path": "ks.cfg",
+    "iso_checksum_type": "sha256",
+    "iso_checksum": "6d44331cc4f6c506c7bbe9feb8468fad6c51a88ca1393ca6b8b486ea04bec3c1"    }
 }
